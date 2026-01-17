@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Controle de Gastos</title>
+  <title>Meu Controle Financeiro</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:16px }
@@ -11,72 +10,83 @@
     .card { background:#fff; padding:16px; border-radius:12px; margin-bottom:16px }
     input, select, button { width:100%; padding:10px; margin-top:8px }
     button { background:#2563eb; color:#fff; border:none; border-radius:8px }
+    .row { display:flex; gap:8px }
   </style>
 </head>
-<body>
+<body><h1>Meu Controle Financeiro</h1><div class="card">
+  <input id="valor" type="number" placeholder="Valor (R$)" /><select id="categoria"></select>
 
-<h1>Controle de Gastos</h1>
-
-<div class="card">
-  <input id="valor" type="number" placeholder="Valor (R$)" />
-  <select id="categoria">
-    <option>Alimentação</option>
-    <option>Casa</option>
-    <option>Combustível</option>
-    <option>Gráfica</option>
-    <option>Lazer</option>
-  </select>
-  <select id="tipo">
+  <div class="row">
+    <input id="novaCategoria" placeholder="Nova categoria" />
+    <button onclick="addCategoria()">+</button>
+  </div>  <select id="tipo">
     <option>Pessoal</option>
     <option>Gráfica</option>
-  </select>
-  <button onclick="adicionar()">Adicionar gasto</button>
-</div>
+  </select>  <input id="data" type="month" /><button onclick="adicionar()">Adicionar gasto</button>
 
-<div class="card">
-  <h3>Resumo</h3>
+</div><div class="card">
+  <h3>Resumo do mês</h3>
   <p id="resumo"></p>
-</div>
-
-<div class="card">
+</div><div class="card">
   <canvas id="grafico"></canvas>
-</div>
-
-<script>
+</div><script>
 let gastos = JSON.parse(localStorage.getItem('gastos') || '[]');
+let categorias = JSON.parse(localStorage.getItem('categorias') || '["Alimentação","Casa","Combustível","Gráfica","Lazer"]');
+
+function salvarCategorias(){
+  localStorage.setItem('categorias', JSON.stringify(categorias));
+}
+
+function carregarCategorias(){
+  const sel = document.getElementById('categoria');
+  sel.innerHTML = '';
+  categorias.forEach(c => {
+    const op = document.createElement('option');
+    op.textContent = c;
+    sel.appendChild(op);
+  });
+}
+
+function addCategoria(){
+  const nome = document.getElementById('novaCategoria').value.trim();
+  if(!nome) return;
+  categorias.push(nome);
+  salvarCategorias();
+  carregarCategorias();
+  document.getElementById('novaCategoria').value = '';
+}
 
 function adicionar() {
   const valor = Number(document.getElementById('valor').value);
   const categoria = document.getElementById('categoria').value;
   const tipo = document.getElementById('tipo').value;
-  if (!valor) return;
+  const mes = document.getElementById('data').value;
+  if (!valor || !mes) return;
 
-  gastos.push({ valor, categoria, tipo });
+  gastos.push({ valor, categoria, tipo, mes });
   localStorage.setItem('gastos', JSON.stringify(gastos));
   atualizar();
 }
 
 function atualizar() {
-  let pessoal = gastos.filter(g=>g.tipo==='Pessoal').reduce((s,g)=>s+g.valor,0);
-  let grafica = gastos.filter(g=>g.tipo==='Gráfica').reduce((s,g)=>s+g.valor,0);
-  document.getElementById('resumo').innerText =
-    `Pessoal: R$ ${pessoal.toFixed(2)} | Gráfica: R$ ${grafica.toFixed(2)}`;
+  const mesAtual = document.getElementById('data').value;
+  const filtrados = gastos.filter(g => g.mes === mesAtual);
 
-  const categorias = {};
-  gastos.forEach(g => categorias[g.categoria] = (categorias[g.categoria]||0)+g.valor);
+  let pessoal = filtrados.filter(g=>g.tipo==='Pessoal').reduce((s,g)=>s+g.valor,0);
+  let grafica = filtrados.filter(g=>g.tipo==='Gráfica').reduce((s,g)=>s+g.valor,0);
+
+  document.getElementById('resumo').innerText = `Pessoal: R$ ${pessoal.toFixed(2)} | Gráfica: R$ ${grafica.toFixed(2)}`;
+
+  const dados = {};
+  filtrados.forEach(g => dados[g.categoria] = (dados[g.categoria]||0)+g.valor);
 
   if (window.chart) window.chart.destroy();
   window.chart = new Chart(document.getElementById('grafico'), {
     type: 'pie',
-    data: {
-      labels: Object.keys(categorias),
-      datasets: [{ data: Object.values(categorias) }]
-    }
+    data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados) }] }
   });
 }
 
-atualizar();
-</script>
-
-</body>
+carregarCategorias();
+</script></body>
 </html>
