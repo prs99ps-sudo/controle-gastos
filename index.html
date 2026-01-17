@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Controle de Gastos</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:16px }
+    h1 { text-align:center }
+    .card { background:#fff; padding:16px; border-radius:12px; margin-bottom:16px }
+    input, select, button { width:100%; padding:10px; margin-top:8px }
+    button { background:#2563eb; color:#fff; border:none; border-radius:8px }
+  </style>
+</head>
+<body>
+
+<h1>Controle de Gastos</h1>
+
+<div class="card">
+  <input id="valor" type="number" placeholder="Valor (R$)" />
+  <select id="categoria">
+    <option>Alimentação</option>
+    <option>Casa</option>
+    <option>Combustível</option>
+    <option>Gráfica</option>
+    <option>Lazer</option>
+  </select>
+  <select id="tipo">
+    <option>Pessoal</option>
+    <option>Gráfica</option>
+  </select>
+  <button onclick="adicionar()">Adicionar gasto</button>
+</div>
+
+<div class="card">
+  <h3>Resumo</h3>
+  <p id="resumo"></p>
+</div>
+
+<div class="card">
+  <canvas id="grafico"></canvas>
+</div>
+
+<script>
+let gastos = JSON.parse(localStorage.getItem('gastos') || '[]');
+
+function adicionar() {
+  const valor = Number(document.getElementById('valor').value);
+  const categoria = document.getElementById('categoria').value;
+  const tipo = document.getElementById('tipo').value;
+  if (!valor) return;
+
+  gastos.push({ valor, categoria, tipo });
+  localStorage.setItem('gastos', JSON.stringify(gastos));
+  atualizar();
+}
+
+function atualizar() {
+  let pessoal = gastos.filter(g=>g.tipo==='Pessoal').reduce((s,g)=>s+g.valor,0);
+  let grafica = gastos.filter(g=>g.tipo==='Gráfica').reduce((s,g)=>s+g.valor,0);
+  document.getElementById('resumo').innerText =
+    `Pessoal: R$ ${pessoal.toFixed(2)} | Gráfica: R$ ${grafica.toFixed(2)}`;
+
+  const categorias = {};
+  gastos.forEach(g => categorias[g.categoria] = (categorias[g.categoria]||0)+g.valor);
+
+  if (window.chart) window.chart.destroy();
+  window.chart = new Chart(document.getElementById('grafico'), {
+    type: 'pie',
+    data: {
+      labels: Object.keys(categorias),
+      datasets: [{ data: Object.values(categorias) }]
+    }
+  });
+}
+
+atualizar();
+</script>
+
+</body>
+</html>
